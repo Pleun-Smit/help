@@ -1,0 +1,21 @@
+@startuml
+title Dynamic Load Balancing - State Diagram
+
+[*] --> SystemIdle
+
+SystemIdle --> PowerAvailable : Power detected
+PowerAvailable --> StationsChecked : Check which stations have cars
+StationsChecked --> PowerAllocated : Divide power among connected stations
+
+PowerAllocated --> Charging : Start charging connected cars
+Charging --> CarLeaves : Car disconnects
+CarLeaves --> StationsChecked : Recalculate connected stations
+
+Charging --> NewCarConnected : Car connects to a free station
+NewCarConnected --> StationsChecked : Recalculate connected stations
+
+StationsChecked --> PowerAllocated : Update power distribution
+
+PowerAllocated --> [*] : System shutdown or reset
+
+@enduml

@@ -1,0 +1,17 @@
+@startuml StaticLoadBalancing
+
+[*] --> SystemIdle
+
+SystemIdle --> PowerAvailable : Power detected
+PowerAvailable --> StationsInitialized : All stations online
+StationsInitialized --> PowerAllocated : Divide power equally (25 kW each)
+
+PowerAllocated --> Charging : Car connects to station
+Charging --> Charging : Continue charging
+Charging --> CarDisconnects : Car leaves or is fully charged
+CarDisconnects --> PowerAllocated : Reallocate power (still equal)
+
+PowerAllocated --> NoCarConnected : No car at station
+NoCarConnected --> PowerAllocated : Still allocate power equally
+
+@enduml

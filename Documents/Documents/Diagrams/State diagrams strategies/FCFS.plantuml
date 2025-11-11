@@ -1,0 +1,22 @@
+@startuml FCFS_Mode_PartialCharging
+
+[*] --> Idle 
+
+Idle --> CarArrived : Car connects
+CarArrived --> CheckPower : Evaluate available power
+CheckPower --> FullCharging : Power >= 11kW
+CheckPower --> PartialCharging : 0 < Power < 11kW
+CheckPower --> Queue : Power == 0
+
+FullCharging --> CarLeaves : Charging complete or car disconnects
+PartialCharging --> CarLeaves : Charging complete or car disconnects
+Queue --> CheckQueue : Periodic power check
+
+CarLeaves --> ReallocatePower : Free up power
+ReallocatePower --> CheckQueue : Check if cars are waiting
+CheckQueue --> FullCharging : Power >= 11kW
+CheckQueue --> PartialCharging : 0 < Power < 11kW
+CheckQueue --> Queue : Power == 0
+CheckQueue --> Idle : No cars waiting
+
+@enduml

@@ -1,0 +1,26 @@
+@startuml Directors_Mode_Updated
+
+[*] --> Idle
+
+Idle --> CarArrived : Car connects
+CarArrived --> CheckPriority : Is car a director?
+CheckPriority --> CheckPower : Evaluate available power
+
+CheckPower --> DirectorCharging : Allocate max available power (up to 11) kW to director 
+DirectorCharging --> DistributeRemainingPower : Calculate remaining power
+
+DistributeRemainingPower --> PartialCharging : Allocate remaining power to non-directors
+DistributeRemainingPower --> Waiting : No power left for others
+
+PartialCharging --> CarLeaves : Charging complete or disconnect
+DirectorCharging --> CarLeaves : Charging complete or disconnect
+Waiting --> CheckQueue : Periodic power check
+
+CarLeaves --> ReallocatePower : Free up power
+ReallocatePower --> CheckQueue : Check if cars are waiting
+CheckQueue --> DirectorCharging : Director car can now charge
+CheckQueue --> PartialCharging : Non-director car can now charge
+CheckQueue --> Waiting : Still no power
+CheckQueue --> Idle : No cars waiting
+
+@enduml

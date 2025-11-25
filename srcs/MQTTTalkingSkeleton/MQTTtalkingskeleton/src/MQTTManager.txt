@@ -1,0 +1,69 @@
+#include "MQTTManager.h"
+
+MQTTManager::MQTTManager(Client& netClient, const char* mqttServer, int mqttPort) : mqttClient(netClient), server(mqttServer), port(mqttPort) {}
+
+void MQTTManager::begin() {
+    mqttClient.setServer(server, port);
+
+    mqttClient.setCallback([this](char* topic, byte* payload, unsigned int length) {
+        this->callback(topic, payload, length);
+    });
+}
+
+void MQTTManager::loop() {
+    if (!mqttClient.connected()) {
+        reconnect();
+    }
+
+    mqttClient.loop();
+
+    // Optional timeout logic (10 seconds)
+    unsigned long now = millis();
+    for (auto &entry : deviceLastSeen) {
+        if (now - entry.second > 10000) {
+            deviceOnline[entry.first] = false;
+        }
+    }
+}
+
+void MQTTManager::subscribePresence(const String& deviceName) {
+    String topic = "presence/" + deviceName;
+    mqttClient.subscribe(topic.c_str());
+}
+
+void MQTTManager::callback(char* topic, byte* payload, unsigned int length) {
+    String message;
+    for (unsigned int i = 0; i < length; i++) {
+        message += (char)payload[i];
+    }
+
+    String topicStr = String(topic);
+
+    if (topicStr.startsWith("presence/")) {
+        String device = topicStr.substring(9);
+
+        deviceOnline[device] = (message == "online");
+        deviceLastSeen[device] = millis();
+    }
+}
+
+void MQTTManager::reconnect() {
+    while (!mqttClient.connected()) {
+        Serial.print("Attempting MQTT connection...");
+
+        if (mqttClient.connect("ESP32-dashboard")) {
+            Serial.println("connected.");
+
+            // Re-subscribe to any existing known devices
+            for (auto &entry : deviceOnline) {
+                subscribePresence(entry.first);
+            }
+
+        } else {
+            Serial.print("failed, rc=");
+            Serial.print(mqttClient.state());
+            Serial.println(" retrying in 2 seconds");
+            delay(2000);
+        }
+    }
+}

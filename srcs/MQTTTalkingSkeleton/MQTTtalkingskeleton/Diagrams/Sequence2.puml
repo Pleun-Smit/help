@@ -1,0 +1,50 @@
+
+@startuml
+title MQTT-based Charging System Sequence Diagram
+
+actor User as U
+participant "Dashboard ESP" as Dashboard
+participant "MQTT Broker (Laptop)" as Broker
+participant "Charging Station ESP #1" as Station1
+participant "Charging Station ESP #2" as Station2
+
+== Wi-Fi Setup ==
+U -> Dashboard: Power on Dashboard ESP
+Dashboard -> Dashboard: WiFi.begin(ssid, password)
+Dashboard -> Dashboard: Wait until WL_CONNECTED
+Dashboard -> Dashboard: Start Web Server
+
+U -> Station1: Power on Station ESP #1
+Station1 -> Station1: WiFi.begin(ssid, password)
+Station1 -> Station1: Wait until WL_CONNECTED
+
+U -> Station2: Power on Station ESP #2
+Station2 -> Station2: WiFi.begin(ssid, password)
+Station2 -> Station2: Wait until WL_CONNECTED
+
+== MQTT Connection ==
+Dashboard -> Broker: Connect MQTT client
+Station1 -> Broker: Connect MQTT client
+Station2 -> Broker: Connect MQTT client
+
+Station1 -> Broker: Subscribe to topic station/1/mode
+Station2 -> Broker: Subscribe to topic station/2/mode
+Dashboard -> Broker: Subscribe to station/+/status
+
+== Status Publishing ==
+loop Every 2 seconds
+    Station1 -> Broker: Publish {"alive":true,"power":X,"mode":"Y"} to station/1/status
+    Station2 -> Broker: Publish {"alive":true,"power":X,"mode":"Y"} to station/2/status
+end
+
+Broker -> Dashboard: Forward status messages
+Dashboard -> Dashboard: Update deviceOnline map
+Dashboard -> Dashboard: Render HTML page with ONLINE/OFFLINE status
+
+== Mode Change ==
+U -> Dashboard: Change mode for Station #1 via Web UI
+Dashboard -> Broker: Publish new mode to station/1/mode
+Broker -> Station1: Deliver mode message
+Station1 -> Station1: callback() -> state.setMode(newMode)
+
+@enduml

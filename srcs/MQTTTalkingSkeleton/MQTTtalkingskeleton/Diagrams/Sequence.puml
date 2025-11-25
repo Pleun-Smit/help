@@ -1,0 +1,33 @@
+@startuml
+title MQTT Communication Flow - Power Load Balancer
+
+actor Dashboard
+participant "MQTT Broker" as Broker
+participant "Charging Station 1" as CS1
+participant "Charging Station 2" as CS2
+participant "Charging Station 3" as CS3
+participant "Charging Station 4" as CS4
+
+== Initial Connection ==
+Dashboard -> Broker : CONNECT
+CS1 -> Broker : CONNECT
+CS2 -> Broker : CONNECT
+CS3 -> Broker : CONNECT
+CS4 -> Broker : CONNECT
+
+== Dashboard sets mode ==
+Dashboard -> Broker : PUBLISH\nTopic: dashboard/mode\nPayload: {mode: DYNAMIC}
+Broker -> CS1 : DELIVER\nTopic: station/1/mode\nPayload: {mode: DYNAMIC}
+Broker -> CS2 : DELIVER\nTopic: station/2/mode\nPayload: {mode: DYNAMIC}
+Broker -> CS3 : DELIVER\nTopic: station/3/mode\nPayload: {mode: DYNAMIC}
+Broker -> CS4 : DELIVER\nTopic: station/4/mode\nPayload: {mode: DYNAMIC}
+
+== Stations report status ==
+CS1 -> Broker : PUBLISH\nTopic: station/1/status\nPayload: {alive:true, power:5.5, mode:DYNAMIC}
+CS2 -> Broker : PUBLISH\nTopic: station/2/status\nPayload: {alive:true, power:5.5, mode:DYNAMIC}
+CS3 -> Broker : PUBLISH\nTopic: station/3/status\nPayload: {alive:true, power:5.5, mode:DYNAMIC}
+CS4 -> Broker : PUBLISH\nTopic: station/4/status\nPayload: {alive:true, power:5.5, mode:DYNAMIC}
+
+Broker -> Dashboard : DELIVER\nTopic: station/+/status\nPayload: aggregated statuses
+
+@enduml

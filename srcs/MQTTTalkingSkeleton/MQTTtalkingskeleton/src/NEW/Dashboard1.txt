@@ -55,7 +55,7 @@ void loop() {
 }
 
 void handleRoot() {
-  String html = "<!DOCTYPE html><html><head><title>EV Dashboard</title></head><body>";
+  String html = "<!DOCTYPE html><html><head><title>EV Dashboard</title>""<meta http-equiv='refresh' content='2'>""</head><body>";
   html += "<h1>EV Charging Dashboard</h1>";
   html += "<p>Current Mode: <b>" + currentMode + "</b></p>";
 
@@ -153,4 +153,4 @@ void reconnect() {
       delay(5000);
     }
   }
-}
+}s

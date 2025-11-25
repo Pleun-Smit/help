@@ -1,0 +1,44 @@
+@startuml
+title Power Load Balancer - MQTT Communication Details
+
+skinparam componentSpacing 60
+skinparam componentVerticalSpacing 50
+skinparam ArrowThickness 2
+skinparam ArrowFontSize 14
+skinparam componentStyle rectangle
+
+component "Dashboard" as Dashboard
+component "MQTT Broker" as Broker
+component "Charging Station 1" as CS1
+component "Charging Station 2" as CS2
+component "Charging Station 3" as CS3
+component "Charging Station 4" as CS4
+component "Office Power Monitor" as PowerMonitor
+
+Dashboard --> Broker : Publish\n\n`dashboard/mode`\n\n{mode}
+Dashboard <-- Broker : Subscribe\n\n`station/+/status`\n\n{alive, power, mode}
+
+CS1 --> Broker : Publish\n\n`station/1/status`\n\n{alive, power, mode}
+CS1 <-- Broker : Subscribe\n\n`station/1/mode`\n\n{mode}
+
+CS2 --> Broker : Publish\n\n`station/2/status`\n\n{alive, power, mode}
+CS2 <-- Broker : Subscribe\n\n`station/2/mode`\n\n{mode}
+
+CS3 --> Broker : Publish\n\n`station/3/status`\n\n{alive, power, mode}
+CS3 <-- Broker : Subscribe\n\n`station/3/mode`\n\n{mode}
+
+CS4 --> Broker : Publish\n\n`station/4/status`\n\n{alive, power, mode}
+CS4 <-- Broker : Subscribe\n\n`station/4/mode`\n\n{mode}
+
+PowerMonitor --> Dashboard : Publish\n\n`office/status`\n\n {buildingPower, solarPower}
+
+note bottom of Broker
+MQTT Topics:
+- station/{id}/status → JSON: {alive, power, mode}
+- station/{id}/mode → JSON: {mode}
+- dashboard/mode → JSON: {mode}
+QoS: 1 (at least once)
+Retain: true for mode topics
+end note
+
+@enduml

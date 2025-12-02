@@ -1,10 +1,17 @@
 #include "CANCommunication.h"
 
-void CANBusInit()
+CANCommunication::CANCommunication(unsigned long TRANSMIT_ID, unsigned long RECEIVE_ID)
 {
-    SPI.begin(18,19,23, CAN_CS);
+    this->CANBusObjectPointer = new MCP_CAN(5);
+    this->TRANSMIT_ID = TRANSMIT_ID;
+    this->RECEIVE_ID = RECEIVE_ID;
+};
 
-  if (CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ) == CAN_OK)
+void CANCommunication::CANBusInit()
+{
+    SPI.begin(ESP_CLK_PIN, ESP_MISO_PIN, ESP_MOSI_PIN, CAN_CS_PIN);
+
+  if (CANBusObjectPointer->begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ) == CAN_OK)
   {
     Serial.println("MCP2515 Initialized Successfully!");
   }
@@ -13,22 +20,22 @@ void CANBusInit()
     Serial.println("Error Initializing MCP2515...");
   }
 
-  CAN0.setMode(MCP_NORMAL);
+  CANBusObjectPointer->setMode(MCP_NORMAL);
 }
 
-void CANBusSendMsg()
+void CANCommunication::CANBusSendMsg()
 {
     if (millis() - lastSendTime >= 5000)
     {
-        byte randomNumber = random(1,41);
-        byte sndStat = CAN0.sendMsgBuf(TRANSMIT_ID, 0, 1, &randomNumber);
+        byte randomNumber = random(1,41); // generate test value
+        byte sndStat = CANBusObjectPointer->sendMsgBuf(TRANSMIT_ID, 0, 1, &randomNumber);
 
         if (sndStat == CAN_OK)
         {
             // -------------------------------
             // CHECK FOR ACK ERROR HERE               This doesnt really work with our transceiver, because this model doesnt need an ACK to send messages. 
             // -------------------------------
-            byte errorAck = CAN0.getError();
+            byte errorAck = CANBusObjectPointer->getError();
 
             if (errorAck != 0)
             {
@@ -59,11 +66,11 @@ void CANBusSendMsg()
     }
 }
 
-void CANBusReceiveMsg(byte* receivedNumber)
+void CANCommunication::CANBusReceiveMsg(byte* receivedNumber)
 {
     if (!digitalRead(CAN_INT))
     {
-        CAN0.readMsgBuf(&rxId, &len, rxBuf);
+        CANBusObjectPointer->readMsgBuf(&rxId, &len, rxBuf);
 
         if (rxId == RECEIVE_ID && len == 1)
         {

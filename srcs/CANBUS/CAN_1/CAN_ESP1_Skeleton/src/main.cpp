@@ -1,13 +1,15 @@
-#include <mcp_can.h>
-#include <SPI.h>
 #include "CANCommunication.h"
 
+#define TRANSMIT_ID 0x200
+#define RECEIVE_ID 0x300
+
+CANCommunication* CanCom;
 byte *receivedNumber;
 
 void setup()
 {
   Serial.begin(115200);
-  CANBusInit();
+  CanCom = new CANCommunication(TRANSMIT_ID, RECEIVE_ID);
 
   Serial.println("Node Ready!");
 }
@@ -18,13 +20,13 @@ void loop()
     // SEND A RANDOM NUMBER EVERY 5 SECONDS
     //--------------------------------------
 
-    CANBusSendMsg();
+    CanCom->CANBusSendMsg();
 
     //--------------------------------------
     //          RECEIVE MESSAGES
     //--------------------------------------
 
-    CANBusReceiveMsg(receivedNumber);
+    CanCom->CANBusReceiveMsg(receivedNumber);
 }
 
 

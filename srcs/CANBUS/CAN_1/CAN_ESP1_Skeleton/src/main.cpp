@@ -1,7 +1,7 @@
 #include "CANCommunication.h"
 
-#define TRANSMIT_ID 0x200
-#define RECEIVE_ID 0x300
+#define TRANSMIT_ID 0x300
+#define RECEIVE_ID 0x200
 
 CANCommunication* CanCom;
 byte receivedNumber;

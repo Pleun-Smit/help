@@ -50,7 +50,7 @@ void CANCommunication::CANBusSendMsg()
             }
             else
             {
-                Serial.print("Sent Number (ACK RECEIVED!): ");
+                Serial.print("Sent Number: ");
                 Serial.print(randomNumber);
                 Serial.print("  (ID: 0x");
                 Serial.print(TRANSMIT_ID, HEX);
@@ -74,7 +74,7 @@ void CANCommunication::CANBusReceiveMsg(byte* receivedNumber)
 
         if (rxId == RECEIVE_ID && len == 1)
         {
-            receivedNumber = &rxBuf[0];
+            *receivedNumber = rxBuf[0];
 
             Serial.print("Received number: ");
             Serial.print(*receivedNumber);

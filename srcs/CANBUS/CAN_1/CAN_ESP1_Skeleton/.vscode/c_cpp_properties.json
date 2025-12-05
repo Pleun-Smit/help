@@ -8,9 +8,9 @@
         {
             "name": "PlatformIO",
             "includePath": [
-                "C:/Users/Gebruiker1/Documents/PlatformIO/Projects/CAN_1/CAN_ESP1_Skeleton/include",
-                "C:/Users/Gebruiker1/Documents/PlatformIO/Projects/CAN_1/CAN_ESP1_Skeleton/src",
-                "C:/Users/Gebruiker1/Documents/PlatformIO/Projects/CAN_1/CAN_ESP1_Skeleton/.pio/libdeps/esp32doit-devkit-v1/mcp_can",
+                "C:/Users/Gebruiker1/Documents/PlatformIO/Projects/CAN_ESP1_Skeleton/include",
+                "C:/Users/Gebruiker1/Documents/PlatformIO/Projects/CAN_ESP1_Skeleton/src",
+                "C:/Users/Gebruiker1/Documents/PlatformIO/Projects/CAN_ESP1_Skeleton/.pio/libdeps/esp32doit-devkit-v1/mcp_can",
                 "C:/Users/Gebruiker1/.platformio/packages/framework-arduinoespressif32/libraries/SPI/src",
                 "C:/Users/Gebruiker1/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/newlib/platform_include",
                 "C:/Users/Gebruiker1/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include",
@@ -245,9 +245,9 @@
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
-                    "C:/Users/Gebruiker1/Documents/PlatformIO/Projects/CAN_1/CAN_ESP1_Skeleton/include",
-                    "C:/Users/Gebruiker1/Documents/PlatformIO/Projects/CAN_1/CAN_ESP1_Skeleton/src",
-                    "C:/Users/Gebruiker1/Documents/PlatformIO/Projects/CAN_1/CAN_ESP1_Skeleton/.pio/libdeps/esp32doit-devkit-v1/mcp_can",
+                    "C:/Users/Gebruiker1/Documents/PlatformIO/Projects/CAN_ESP1_Skeleton/include",
+                    "C:/Users/Gebruiker1/Documents/PlatformIO/Projects/CAN_ESP1_Skeleton/src",
+                    "C:/Users/Gebruiker1/Documents/PlatformIO/Projects/CAN_ESP1_Skeleton/.pio/libdeps/esp32doit-devkit-v1/mcp_can",
                     "C:/Users/Gebruiker1/.platformio/packages/framework-arduinoespressif32/libraries/SPI/src",
                     "C:/Users/Gebruiker1/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/newlib/platform_include",
                     "C:/Users/Gebruiker1/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include",

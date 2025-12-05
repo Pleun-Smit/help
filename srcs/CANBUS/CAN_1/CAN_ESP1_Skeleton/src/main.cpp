@@ -4,12 +4,13 @@
 #define RECEIVE_ID 0x300
 
 CANCommunication* CanCom;
-byte *receivedNumber;
+byte receivedNumber;
 
 void setup()
 {
   Serial.begin(115200);
   CanCom = new CANCommunication(TRANSMIT_ID, RECEIVE_ID);
+  CanCom->CANBusInit();
 
   Serial.println("Node Ready!");
 }
@@ -26,7 +27,7 @@ void loop()
     //          RECEIVE MESSAGES
     //--------------------------------------
 
-    CanCom->CANBusReceiveMsg(receivedNumber);
+    CanCom->CANBusReceiveMsg(&receivedNumber);
 }
 
 

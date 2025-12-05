@@ -29,7 +29,7 @@ class CANCommunication
 
     private:
     MCP_CAN* CANBusObjectPointer;
-    unsigned long lastSendTime;
+    unsigned long lastSendTime = 0;
     long unsigned int rxId;
     unsigned char len;
     unsigned char rxBuf[8];

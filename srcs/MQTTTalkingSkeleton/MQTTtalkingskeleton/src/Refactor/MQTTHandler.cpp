@@ -141,7 +141,6 @@ void MQTTHandler::publishConnectionStatus(bool alive) {
     }
 }
 
-// ------------------ Update logic with grace period ------------------
 void MQTTHandler::update() {
     unsigned long now = millis();
 
@@ -152,35 +151,40 @@ void MQTTHandler::update() {
     publishConnectionStatus(true);
     systemState->checkTimeouts();
 
-    // Coordination / safety
+    // Strongly enforce dashboard mode: if you ever received a dashboard/mode message, always keep that mode!
+    static bool dashboardActive = false;
+    if (lastDashboardUpdate != 0) // was a dashboard mode ever set in this session?
+        dashboardActive = true;
+
+    if (dashboardActive) {
+        static String lastPrintedMode = "";
+        if (state->mode != lastPrintedMode) {
+            Serial.printf("[INFO] Dashboard mode is in force, keeping: %s\n", state->mode.c_str());
+            lastPrintedMode = state->mode;
+        }
+        state->charging = true;
+        return; // *** EARLY RETURN: never run the neighbor logic ***
+    }
+
+    // ------ Neighbor logic runs ONLY if no dashboard mode was ever set ------
     String neighborMode;
     bool neighborsMatch = systemState->allSameMode(&neighborMode);
     int alivePeers = systemState->aliveCount();
     int totalPeers = EXPECTED_STATION_COUNT;
 
-    bool dashboardJustChanged = (now - lastDashboardUpdate) < dashboardGraceMs;
-
-    
-    if (dashboardJustChanged) {
-        // Dashboard mode has priority → keep it
-        Serial.println("[INFO] Dashboard mode recently changed → keeping it.");
-        state->charging = true;  // assume safe to charge
-    } else {
-        // Dashboard not recently changed → apply safety/neighbor sync
-        if (!neighborsMatch || alivePeers < totalPeers) {
-            if (state->mode != "STATIC") {
-                state->setMode("STATIC");
-                Serial.println("[SAFETY] Entering STATIC mode due to failure/disagreement!");
-            }
-            state->charging = false;
-        } else if (neighborMode != state->mode) {
-            state->setMode(neighborMode);
-            Serial.print("[SYNC] Neighbor mode differs → switching to: ");
-            Serial.println(neighborMode);
-            state->charging = true;
-        } else {
-            state->charging = true;  // all good
+    if (!neighborsMatch || alivePeers < totalPeers) {
+        if (state->mode != "STATIC") {
+            state->setMode("STATIC");
+            Serial.println("[SAFETY] Entering STATIC mode due to failure/disagreement!");
         }
+        state->charging = false;
+    } else if (neighborMode != state->mode) {
+        state->setMode(neighborMode);
+        Serial.print("[SYNC] Neighbor mode differs → switching to: ");
+        Serial.println(neighborMode);
+        state->charging = true;
+    } else {
+        state->charging = true;  // all good
     }
 }
 

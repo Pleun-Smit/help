@@ -5,7 +5,7 @@
 
 SystemState::SystemState(unsigned long timeout) : timeoutMs(timeout) {}
 
-void SystemState::updateStation(int id, const String& mode, int power) {
+void SystemState::updateStation(int id, const String& mode, int power, bool connected) {
     StationInfo info = { StationState(id), millis() };
     info.state.setMode(mode);
     info.state.power = power;
@@ -27,11 +27,11 @@ void SystemState::checkTimeouts() {
     }
 }
 
-void SystemState::printData(){
-    for(const auto& enrty : stations){
-        std::cout << " " << enrty.first << "\n";
-    }
-}
+// void SystemState::printData(){
+//     for(const auto& enrty : stations){
+//         std::cout << " " << enrty.first << "\n";
+//     }
+// }
 
 const std::map<int, SystemState::StationInfo>& SystemState::getStations() const {
     return stations;

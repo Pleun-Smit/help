@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <WebServer.h>
+#include <ArduinoJson.h>
 
 String stationMode[4] = {"?", "?", "?", "?"};
 
@@ -93,50 +94,41 @@ void handleRoot() {
 }
 
 void handleSetMode() {
-  Serial.println("handleSetMode");
-  currentMode = server.arg("mode");
-  String payload = "{\"mode\":\"" + currentMode + "\"}";
-  Serial.println("payload:" + payload);
-  client.publish("dashboard/mode", payload.c_str(), true);
-  sendModeToStation();
-  server.sendHeader("Location", "/");
-  server.send(303);
-}
+    currentMode = server.arg("mode");
 
-void sendModeToStation(){
-  for (int i = 1; i <= 4; i++) {
-      String topic = "station/" + String(i) + "/mode";
-      client.publish(topic.c_str(), currentMode.c_str(), true);
-  }
+    // Send only dashboard/mode JSON
+    String payload = "{\"mode\":\"" + currentMode + "\"}";
+    client.publish("dashboard/mode", payload.c_str(), true);
+
+    Serial.print("[Dashboard] Sent mode: ");
+    Serial.println(currentMode);
+
+    server.sendHeader("Location", "/");
+    server.send(303);
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
-  String t = String(topic);
-  Serial.println("Callback: " + t);
+    String t = String(topic);
+    String msg;
+    for (int i = 0; i < length; i++) msg += (char)payload[i];
 
-  // Handle station status
-  if (t.startsWith("station/") && t.endsWith("/status")) {
-    int id = t.charAt(8) - '1';  // station/1/status
-    if (id >= 0 && id < 4) {
-      lastUpdate[id] = millis();
+    // Status from stations
+    if (t.startsWith("station/") && t.endsWith("/status")) {
+        int id = t.charAt(8) - '1'; // station/1/status
+        if (id >= 0 && id < 4) {
+            lastUpdate[id] = millis();
+
+            StaticJsonDocument<200> doc;
+            if (!deserializeJson(doc, msg)) return;
+
+            String mode = doc["mode"] | "?";
+            stationMode[id] = mode;
+
+            Serial.printf("[Dashboard] Station %d mode=%s\n", id + 1, mode.c_str());
+        }
     }
-    return;
-  }
-
-  // Handle station mode reporting: station/<id>/mode
-  if (t.startsWith("station/") && t.endsWith("/mode")) {
-    int id = t.charAt(8) - '1';
-
-    if (id >= 0 && id < 4) {
-      String mode;
-      for (int i = 0; i < length; i++) mode += (char)payload[i];
-      mode.trim();
-
-      stationMode[id] = mode;  // save mode
-      Serial.printf("Station %d mode = %s\n", id + 1, stationMode[id].c_str());
-    }
-  }
 }
+
 
 
 void reconnect() {
@@ -153,4 +145,4 @@ void reconnect() {
       delay(5000);
     }
   }
-}s
+}

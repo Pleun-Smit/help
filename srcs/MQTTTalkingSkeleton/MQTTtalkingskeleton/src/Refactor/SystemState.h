@@ -7,8 +7,11 @@ class SystemState {
 public:
   struct StationInfo {
     StationState state;       // neighbor snapshot (id/mode/power)
-    unsigned long lastUpdate; // millis() timestamp when we last saw a message
-    bool connected;           // /connection topic says the peer is alive
+    unsigned long lastUpdate; // millis() when last update seen
+    bool connected;           // true if /connection or recent /status
+    StationInfo() : state(), lastUpdate(0), connected(false) {}
+    StationInfo(StationState s, unsigned long t, bool c = false)
+      : state(s), lastUpdate(t), connected(c) {}
   };
 
 private:
@@ -18,18 +21,17 @@ private:
 public:
   SystemState(unsigned long timeout = 5000);
 
-  // Update or insert neighbor info. 'connected' defaults true for /status updates.
   void updateStation(int id, const String& mode, int power, bool connected = true);
   void removeStation(int id);
+
   void checkTimeouts();
 
-  // --- Helpers for decentralized coordination ---
-  int  aliveCount() const;                         // count of connected & recent neighbors
-  int  totalPower() const;                         // sum of neighbors' power use
-  bool allSameMode(String* modeOut = nullptr) const; // true if all neighbors share a mode
-  String majorityMode() const;                     // majority vote; "SAFE" on tie/none
+  // --- Coordination helpers ---
+  int  aliveCount() const;                         // stations seen and marked connected
+  int  totalPower() const;                         // sum of peer stations with connected = true
+  bool allSameMode(String* modeOut = nullptr) const; // true if all reported modes match
+  String majorityMode() const;                     // majority mode ("SAFE" on tie)
 
-  // --- Serial output ---
   void printNeighborsToSerial(int selfId) const;
 
   const std::map<int, StationInfo>& getStations() const { return stations; }

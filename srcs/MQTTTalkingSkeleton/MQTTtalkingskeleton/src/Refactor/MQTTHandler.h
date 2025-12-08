@@ -11,18 +11,17 @@ public:
   MQTTHandler(const char* ssid,
               const char* password,
               const char* mqtt_server,
-              uint16_t mqtt_port,
               std::shared_ptr<StationState> state,
               SystemState* systemState);
 
   void begin();
   void update();
 
-  // Public publishing helpers
-  void publishStatusToDashboard();           // station/{id}/status  (retained)
-  void publishConnectionStatus(bool alive);  // station/{id}/connection (retained)
+  void publishStatusToDashboard();
+  void publishConnectionStatus(bool alive);
+  void printPeerInfo(int alivePeers, int totalPeers, bool neighborsMatch, String neighborMode);
+  void printOwnInfo();
 
-  // Utility publish
   void publish(String topic, String payload);
   void publish(String topic, String payload, int intervalMs);
 
@@ -32,7 +31,6 @@ private:
   const char* ssid;
   const char* password;
   const char* mqtt_server;
-  uint16_t mqtt_port;
   std::shared_ptr<StationState> state;
   SystemState* systemState;
 
@@ -40,6 +38,6 @@ private:
   static void callbackThunk(char*, byte*, unsigned int);
   void callback(char* topic, byte* payload, unsigned int length);
 
-  void reconnect(); // sets MQTT Last Will to broadcast {"alive":false} on disconnect
+  void reconnect();
   int  extractIdFromTopic(const String& topic);
 };

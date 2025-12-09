@@ -1,6 +1,6 @@
 #include "MQTTHandler.h"
 
-#define EXPECTED_STATION_COUNT 2    // Set this to the number of charging stations in your network
+#define EXPECTED_STATION_COUNT 3    // Set this to the number of charging stations in your network
 
 unsigned long lastPrintTime = 0;
 const unsigned long interval = 2000;  // 500ms
@@ -127,6 +127,7 @@ void MQTTHandler::publishStatusToDashboard() {
                          ",\"mode\":\"" + state->mode + "\"}";
 
         String topic = "station/" + String(state->id) + "/status";
+        Serial.printf("[PUBLISH] topic='%s', payload=%s\n", topic.c_str(), payload.c_str());
         client.publish(topic.c_str(), payload.c_str(), true);
     }
 }

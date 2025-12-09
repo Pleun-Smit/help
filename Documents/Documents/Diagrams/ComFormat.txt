@@ -1,0 +1,25 @@
+Building --> Station : ( PowerConsumption + SolarPower )
+
+Building --> Dashboard : ( PowerConsumption + SolarPower )
+
+Station --> Station : ( Id + Mode + PowerUsage + Alive + ErrorState + *ErrorId )
+
+
+
+# begin eind
+$ Data scheiden van naam
+
+VB: Building --> Station
+	#solar$80$Building$50#
+
+VB: Station --> Station
+	#Id$1$Mode$Static$Power$10$Connection$true$ErrorState$false$ErrorID$-1#
+
+
+
+
+
+
+Flag in dashboard als een station meer stroom gebruikt dan mag
+
+Fixed ceo paal in directors mode

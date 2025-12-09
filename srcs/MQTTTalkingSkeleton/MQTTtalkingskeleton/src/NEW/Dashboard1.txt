@@ -93,6 +93,7 @@ void handleRoot() {
   server.send(200, "text/html", html);
 }
 
+
 void handleSetMode() {
     currentMode = server.arg("mode");
 
@@ -107,24 +108,40 @@ void handleSetMode() {
     server.send(303);
 }
 
+
 void callback(char* topic, byte* payload, unsigned int length) {
     String t = String(topic);
     String msg;
-    for (int i = 0; i < length; i++) msg += (char)payload[i];
 
-    // Status from stations
+    for (int i = 0; i < length; i++) {
+        msg += (char)payload[i];
+    }
+
+    // Only handle station status messages
     if (t.startsWith("station/") && t.endsWith("/status")) {
-        int id = t.charAt(8) - '1'; // station/1/status
+
+        // Extract station ID between "station/" and "/status"
+        int start = t.indexOf('/') + 1;     // position after "station/"
+        int end   = t.indexOf('/', start);  // position before "status"
+        int id    = t.substring(start, end).toInt(); // convert to integer
+
+        // Validate ID range
         if (id >= 0 && id < 4) {
             lastUpdate[id] = millis();
 
             StaticJsonDocument<200> doc;
-            if (!deserializeJson(doc, msg)) return;
+            DeserializationError err = deserializeJson(doc, msg);
+
+            if (err) {
+                Serial.print("JSON error: ");
+                Serial.println(err.c_str());
+                return;
+            }
 
             String mode = doc["mode"] | "?";
             stationMode[id] = mode;
 
-            Serial.printf("[Dashboard] Station %d mode=%s\n", id + 1, mode.c_str());
+            Serial.printf("[Dashboard] Station %d mode=%s\n", id, mode.c_str());
         }
     }
 }

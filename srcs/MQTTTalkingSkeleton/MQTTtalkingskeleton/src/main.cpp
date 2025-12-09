@@ -4,6 +4,14 @@
 #include <WebServer.h>
 #include <ArduinoJson.h>
 
+bool burstActive = false;
+unsigned long burstStart = 0;
+unsigned long lastBurstPublish = 0;
+const unsigned long burstDuration = 3000; // burst lasts 3 seconds
+const unsigned long burstInterval = 300;  // publish every 300 ms
+String burstMode = "STATIC";
+
+
 String stationMode[4] = {"?", "?", "?", "?"};
 
 
@@ -24,6 +32,7 @@ void handleSetMode();
 void sendModeToStation();
 void callback(char* topic, byte* payload, unsigned int length);
 void reconnect();
+void handleBurstPublish();
 
 void setup() {
   Serial.begin(115200);
@@ -53,6 +62,8 @@ void loop() {
   if (!client.connected()) reconnect();
   client.loop();
   server.handleClient();
+
+  handleBurstPublish();
 }
 
 void handleRoot() {
@@ -93,47 +104,63 @@ void handleRoot() {
   server.send(200, "text/html", html);
 }
 
+
+// void handleSetMode() {
+//     currentMode = server.arg("mode");
+
+//     // Send only dashboard/mode JSON
+//     String payload = "{\"mode\":\"" + currentMode + "\"}";
+//     client.publish("dashboard/mode", payload.c_str(), true);
+
+//     Serial.print("[Dashboard] Sent mode: ");
+//     Serial.println(currentMode);
+
+//     server.sendHeader("Location", "/");
+//     server.send(303);
+// }
+
 void handleSetMode() {
     currentMode = server.arg("mode");
 
-    // Send only dashboard/mode JSON
-    String payload = "{\"mode\":\"" + currentMode + "\"}";
-    client.publish("dashboard/mode", payload.c_str(), true);
+    // start burst
+    burstMode = currentMode;
+    burstActive = true;
+    burstStart = millis();
+    lastBurstPublish = 0;
 
-    Serial.print("[Dashboard] Sent mode: ");
+    Serial.print("[Dashboard] Burst triggered for mode: ");
     Serial.println(currentMode);
 
+    // redirect back to UI
     server.sendHeader("Location", "/");
     server.send(303);
 }
 
-// void callback(char* topic, byte* payload, unsigned int length) {
-//     String t = String(topic);
-//     String msg;
-//     for (int i = 0; i < length; i++) msg += (char)payload[i];
+void handleBurstPublish() {
+    if (!burstActive) return;    // nothing to do
 
-//     // Status from stations
-//     if (t.startsWith("station/") && t.endsWith("/status")) {
-//         int id = t.charAt(8) - '1'; // station/1/status
-//         if (id >= 0 && id < 4) {
-//             lastUpdate[id] = millis();
+    unsigned long now = millis();
 
-//             StaticJsonDocument<200> doc;
+    // stop burst if duration ended
+    if (now - burstStart > burstDuration) {
+        burstActive = false;
+        Serial.println("[Dashboard] Burst finished.");
+        return;
+    }
 
-//             DeserializationError err = deserializeJson(doc, msg);
-//             if (err) {
-//                 Serial.print("JSON error: ");
-//                 Serial.println(err.c_str());
-//                 return;
-//             }
+    // publish at intervals
+    if (now - lastBurstPublish > burstInterval) {
+        lastBurstPublish = now;
 
-//             String mode = doc["mode"] | "?";
-//             stationMode[id] = mode;
+        String payload = "{\"mode\":\"" + burstMode + "\"}";
+        client.publish("dashboard/mode", payload.c_str(), true);
 
-//             Serial.printf("[Dashboard] Station %d mode=%s\n", id + 1, mode.c_str());
-//         }
-//     }
-// }
+        Serial.print("[Dashboard] BURST publish: ");
+        Serial.println(payload);
+    }
+}
+
+
 
 void callback(char* topic, byte* payload, unsigned int length) {
     String t = String(topic);

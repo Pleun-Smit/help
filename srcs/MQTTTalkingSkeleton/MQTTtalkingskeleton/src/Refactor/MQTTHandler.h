@@ -21,6 +21,10 @@ public:
   void publishConnectionStatus(bool alive);
   void printPeerInfo(int alivePeers, int totalPeers, bool neighborsMatch, String neighborMode);
   void printOwnInfo();
+  void ManualMode(String mode);
+  void HandleSerialInput();
+  void countActiveStations();
+  void applyDashboardMode(const String& mode); 
 
   void publish(String topic, String payload);
   void publish(String topic, String payload, int intervalMs);

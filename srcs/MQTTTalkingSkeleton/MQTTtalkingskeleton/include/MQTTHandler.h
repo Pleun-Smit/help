@@ -53,11 +53,11 @@ private:
 
   void publishStatusToDashboard();
   void publishConnectionStatus(bool alive);
-  void printPeerInfo(int alivePeers, int totalPeers, bool neighborsMatch, String neighborMode);
+  void printPeerInfo(int alivePeers, int totalPeers, bool neighborsMatch, StationState::Mode neighborMode);
   void printOwnInfo();
-  void ManualMode(String mode);
+  void ManualMode(StationState::Mode mode);
   void HandleSerialInput();
-  void applyDashboardMode(const String& mode); 
+  void applyDashboardMode(const StationState::Mode& mode); 
 
   unsigned long lastPrintTime = 0;
   const unsigned long interval = 2000;  // 2000ms

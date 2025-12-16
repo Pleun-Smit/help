@@ -1,4 +1,5 @@
 #include "MQTTHandler.h"
+#include "Helpers.h"
 
 #define EXPECTED_STATION_COUNT 2    // Set this to the number of charging stations in your network
 
@@ -44,13 +45,14 @@ void MQTTHandler::callback(char* topic, byte* payload, unsigned int length) {
         if (deserializeJson(doc, msg)) return;
 
         bool alive = doc["alive"];
-        String mode = doc["mode"] | "STATIC";
+        String modeStr = doc["mode"] | "STATIC";
+        StationState::Mode mode = Helpers::modeFromString(modeStr);
         int power = doc["power"] | 0;
 
         systemState->updateStation(id, mode, power, alive);
 
         Serial.printf("[MQTT] Station %d status: mode=%s, power=%d, alive=%s\n",
-                      id, mode.c_str(), power, alive ? "true" : "false");
+                      id, modeStr.c_str(), power, alive ? "true" : "false");
     }
 
     // ------------------ Dashboard mode ------------------
@@ -61,9 +63,10 @@ void MQTTHandler::callback(char* topic, byte* payload, unsigned int length) {
             Serial.println("[MQTT] Failed to parse dashboard/mode JSON!");
         } else {
             String mode = doc["mode"] | "STATIC";
+            StationState::Mode mode2 = Helpers::modeFromString(mode); // da es nie fanccy maar wist even niet beter
 
             // 1) Apply locally
-            state->setMode(mode);
+            state->setMode(mode2);
 
             // 2) Start dashboard grace period
             lastDashboardUpdate = millis();
@@ -139,13 +142,14 @@ void MQTTHandler::update() {
     // ---------------- Dashboard grace check (first!) ----------------
     bool dashboardInGrace = (lastDashboardUpdate != 0) &&
                             ((now - lastDashboardUpdate) < dashboardGraceMs);
+    String modeStr = Helpers::modeToString(state->mode);
 
     if (dashboardInGrace) {
         static unsigned long lastPrint = 0;
         if (now - lastPrint > 1000) {
             unsigned long remaining = dashboardGraceMs - (now - lastDashboardUpdate);
             Serial.printf("[INFO] Dashboard override active (%lu ms left), mode=%s\n",
-                          remaining, state->mode.c_str());
+                          remaining, modeStr.c_str());
             lastPrint = now;
         }
 
@@ -154,7 +158,7 @@ void MQTTHandler::update() {
     }
 
     // ---------------- Neighbor / safety logic (only after grace) ----------------
-    String neighborMode;
+    StationState::Mode neighborMode;
     bool neighborsMatch = systemState->allSameMode(&neighborMode);
     int alivePeers = systemState->aliveCount();
     int totalPeers = EXPECTED_STATION_COUNT;
@@ -169,17 +173,17 @@ void MQTTHandler::update() {
     bool missingPeers = alivePeers < totalPeers;
 
     if (disagreement || missingPeers) {
-        if (state->mode != "STATIC") {
+        if (state->mode != StationState::Static) {
             Serial.println("[SAFETY] Disagreement or offline peers → forcing STATIC mode.");
-            state->setMode("STATIC");
+            state->setMode(StationState::Static);
         }
         state->charging = false;
         return;
     }
-
+    String neighborModeStr = Helpers::modeToString(neighborMode);
     // Sync mode if needed
     if (neighborMode != state->mode) {
-        Serial.printf("[SYNC] Sync local mode to %s\n", neighborMode.c_str());
+        Serial.printf("[SYNC] Sync local mode to %s\n", neighborModeStr.c_str());
         state->setMode(neighborMode);
     }
 
@@ -187,7 +191,7 @@ void MQTTHandler::update() {
 }
 
 
-void MQTTHandler::printPeerInfo(int alivePeers, int totalPeers, bool neighborsMatch, String neighborMode){
+void MQTTHandler::printPeerInfo(int alivePeers, int totalPeers, bool neighborsMatch, StationState::Mode neighborMode){
     Serial.println("---------- Coordination Debug ----------");
     Serial.print("[DEBUG] Alive peers: ");
     Serial.print(alivePeers);
@@ -225,11 +229,11 @@ void MQTTHandler::publish(String topic, String payload, int interval){
     }
 }
 
-void MQTTHandler::ManualMode(String mode){
+void MQTTHandler::ManualMode(StationState::Mode mode){
     state->setMode(mode);
 }
 
-void MQTTHandler::applyDashboardMode(const String& mode) {
+void MQTTHandler::applyDashboardMode(const StationState::Mode& mode) {
     state->setMode(mode);
     lastDashboardUpdate = millis();
     publishStatusToDashboard();  // Force immediate publish
@@ -238,7 +242,8 @@ void MQTTHandler::applyDashboardMode(const String& mode) {
 
 void MQTTHandler::HandleSerialInput(){
     if(Serial.available()){
-        String mode = Serial.readString();
+        String modeStr = Serial.readString();
+        StationState::Mode mode = Helpers::modeFromString(modeStr);
         ManualMode(mode);
     }
 }   

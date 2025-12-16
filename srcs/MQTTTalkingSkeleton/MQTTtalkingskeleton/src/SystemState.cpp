@@ -5,7 +5,7 @@
 SystemState::SystemState(unsigned long timeout) : timeoutMs(timeout) {}
 
 
-void SystemState::updateStation(int id, const String& mode, int power, bool connected) {
+void SystemState::updateStation(int id, StationState::Mode mode, int power, bool connected) {
     auto& info = stations[id];
     info = StationInfo(StationState(id), millis(), connected);
     info.state.setMode(mode);
@@ -44,10 +44,10 @@ int SystemState::totalPower() const {
     return total;
 }
 
-bool SystemState::allSameMode(String* modeOut) const {
+bool SystemState::allSameMode(StationState::Mode* modeOut) const {
     if (stations.empty()) return true;
     auto it = stations.begin();
-    String firstMode = it->second.state.mode;
+    StationState::Mode firstMode = it->second.state.mode;
     if (modeOut) *modeOut = firstMode;
     for (++it; it != stations.end(); ++it) {
         if (it->second.state.mode != firstMode)
@@ -57,7 +57,7 @@ bool SystemState::allSameMode(String* modeOut) const {
 }
 
 String SystemState::majorityMode() const {
-    std::map<String, int> modeCounts;
+    std::map<StationState::Mode, int> modeCounts;
     for (const auto& pair : stations) {
         if (pair.second.connected) {
             modeCounts[pair.second.state.mode]++;

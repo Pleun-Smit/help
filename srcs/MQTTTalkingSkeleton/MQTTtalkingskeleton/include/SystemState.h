@@ -5,6 +5,8 @@
 
 class SystemState {
   public:
+  StationState::Mode modus;
+
   struct StationInfo {
     StationState state;       // neighbor snapshot (id/mode/power)
     unsigned long lastUpdate; // millis() when last update seen
@@ -15,7 +17,7 @@ class SystemState {
   };
   SystemState(unsigned long timeout = 5000);
 
-  void updateStation(int id, const String& mode, int power, bool connected = true);
+  void updateStation(int id, StationState::Mode mode, int power, bool connected = true);
   void removeStation(int id);
 
   void checkTimeouts();
@@ -23,7 +25,7 @@ class SystemState {
   // --- Coordination helpers ---
   int  aliveCount() const;                         // stations seen and marked connected
   int  totalPower() const;                         // sum of peer stations with connected = true
-  bool allSameMode(String* modeOut = nullptr) const; // true if all reported modes match
+  bool allSameMode(StationState::Mode* modeOut = nullptr) const; // true if all reported modes match
   String majorityMode() const;                     // majority mode ("SAFE" on tie)
 
   void printNeighborsToSerial(int selfId) const;

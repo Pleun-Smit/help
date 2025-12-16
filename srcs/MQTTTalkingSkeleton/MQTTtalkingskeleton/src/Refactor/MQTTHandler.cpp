@@ -2,11 +2,7 @@
 
 #define EXPECTED_STATION_COUNT 2    // Set this to the number of charging stations in your network
 
-unsigned long lastPrintTime = 0;
-const unsigned long interval = 2000;  // 2000ms
 
-unsigned long lastDashboardUpdate = 0;
-const unsigned long dashboardGraceMs = 5000; // 5000ms grace period
 
 MQTTHandler* MQTTHandler::instance = nullptr;
 
@@ -16,7 +12,7 @@ MQTTHandler::MQTTHandler(const char* ssid, const char* password, const char* mqt
     instance = this;
 }
 
-void MQTTHandler::begin() {
+void MQTTHandler::initialize() {
     WiFi.begin(ssid, password);
     while (WiFi.status() != WL_CONNECTED) delay(500);
 
@@ -81,49 +77,11 @@ void MQTTHandler::callback(char* topic, byte* payload, unsigned int length) {
             Serial.printf("[MQTT] Dashboard mode applied and published: %s\n", mode.c_str());
         }
     }
+    else {
+        Serial.printf("Topic is illegal");
+        return;
+    }
 }
-
-
-// void MQTTHandler::callback(char* topic, byte* payload, unsigned int length) {
-//     String t(topic);
-//     String msg;
-//     for (unsigned int i = 0; i < length; i++) msg += (char)payload[i];
-//     msg.trim();
-
-//     // ------------------ Station status ------------------
-//     if (t.startsWith("station/") && t.endsWith("/status")) {
-//         int id = extractIdFromTopic(t);
-//         StaticJsonDocument<200> doc;
-//         if (deserializeJson(doc, msg)) return;
-
-//         bool alive = doc["alive"];
-//         String mode = doc["mode"] | "STATIC";
-//         int power = doc["power"] | 0;
-
-//         systemState->updateStation(id, mode, power, alive);
-
-//         Serial.printf("[MQTT] Station %d status: mode=%s, power=%d, alive=%s\n",
-//                       id, mode.c_str(), power, alive ? "true" : "false");
-//     }
-
-//     // ------------------ Dashboard mode ------------------
-//     else if (t == "dashboard/mode") {
-//         StaticJsonDocument<50> doc;
-//         DeserializationError err = deserializeJson(doc, msg);
-//         if (!err) {
-//             String mode = doc["mode"] | "STATIC";
-//             state->setMode(mode);
-//             lastDashboardUpdate = millis();
-//             Serial.print("[MQTT] Dashboard mode applied: ");
-//             Serial.println(state->mode);
-//         } else {
-//             Serial.println("[MQTT] Failed to parse dashboard/mode JSON!");
-//         }
-//     }
-// }
-
-
-
 
 void MQTTHandler::reconnect() {
     while (!client.connected()) {
@@ -133,6 +91,7 @@ void MQTTHandler::reconnect() {
             client.subscribe("dashboard/mode");
             client.subscribe("system/mode");
         } else {
+            Serial.printf("Unable to reconnect... trying again later");
             delay(3000);
         }
     }
@@ -228,121 +187,6 @@ void MQTTHandler::update() {
 }
 
 
-
-// void MQTTHandler::update() {
-//     unsigned long now = millis();
-
-//     if (!client.connected()) reconnect();
-//     client.loop();
-
-//     publishStatusToDashboard();
-//     publishConnectionStatus(true);
-//     systemState->checkTimeouts();
-
-//     HandleSerialInput();
-
-//     // Strongly enforce dashboard mode: if you ever received a dashboard/mode message, always keep that mode!
-//     static bool dashboardActive = false;
-//     if (lastDashboardUpdate != 0) // was a dashboard mode ever set in this session?
-//         dashboardActive = true;
-
-//     if (dashboardActive) {
-//         static String lastPrintedMode = "";
-//         if (state->mode != lastPrintedMode) {
-//             Serial.printf("[INFO] Dashboard mode is in force, keeping: %s\n", state->mode.c_str());
-//             lastPrintedMode = state->mode;
-//         }
-//         state->charging = true;
-//         //return; // *** EARLY RETURN: never run the neighbor logic ***
-//     }
-
-//     // ------ Neighbor logic runs ONLY if no dashboard mode was ever set ------
-//     String neighborMode;
-//     bool neighborsMatch = systemState->allSameMode(&neighborMode);
-//     int alivePeers = systemState->aliveCount();
-//     int totalPeers = EXPECTED_STATION_COUNT;
-
-//     if (!neighborsMatch || alivePeers < totalPeers) {
-//         if (state->mode != "STATIC") {
-//             state->setMode("STATIC");
-//             Serial.println("[SAFETY] Entering STATIC mode due to failure/disagreement!");
-//         }
-//         state->charging = false;
-//     } else if (neighborMode != state->mode) {
-//         state->setMode(neighborMode);
-//         Serial.print("[SYNC] Neighbor mode differs → switching to: ");
-//         Serial.println(neighborMode);
-//         state->charging = true;
-//     } else {
-//         state->charging = true;  // all good
-//     }
-// }
-
-// void MQTTHandler::update() {
-//     unsigned long now = millis();
-
-//     // MQTT connectivity check
-//     if (!client.connected()) {
-//         Serial.println("[MQTT] Client not connected, attempting reconnect...");
-//         reconnect();
-//     } else {
-//         //Serial.println("[MQTT] Client connected.");
-//     }
-
-//     client.loop();
-//     publishStatusToDashboard();
-//     publishConnectionStatus(true);
-//     systemState->checkTimeouts();
-
-//     // --- Coordination logic ---
-//     String neighborMode;
-//     bool neighborsMatch = systemState->allSameMode(&neighborMode);
-//     int alivePeers = systemState->aliveCount();
-//     int totalPeers = EXPECTED_STATION_COUNT;
-
-//     if (now - lastPrintTime >= interval) {
-//         printPeerInfo(alivePeers, totalPeers, neighborMode, neighborMode);
-//         lastPrintTime = now;
-//     }
-
-    
-
-//     // If you have access to peer info, print each peer:
-//     //systemState->printPeerTable();
-//     //systemState->printNeighborsToSerial();  
-//     // <--- You need to implement this if it doesn’t exist yet.
-//     // It should print each station ID, last-heard timestamp, mode, etc.
-
-
-//     // Logic for SAFE mode if peers are off or disagreement
-//     // if (!neighborsMatch || alivePeers < totalPeers) {
-//     //     Serial.println("[SAFETY] Issue detected:");
-//     //     if (!neighborsMatch) Serial.println("   → Modes DO NOT MATCH!");
-//     //     if (alivePeers < totalPeers) Serial.println("   → Some peers are offline!");
-
-//     //     if (state->mode != "STATIC") {
-//     //         Serial.println("[SAFETY] Entering SAFE (STATIC) mode!");
-//     //         state->setMode("STATIC");
-//     //     }
-
-//     //     state->charging = false;
-//     //     Serial.println("[SAFETY] Charging turned OFF.");
-//     // } else {
-//     //     Serial.println("[SYNC] All peers OK and matching.");
-
-//     //     if (neighborMode != state->mode) {
-//     //         Serial.print("[SYNC] Switching local mode to neighbor mode: ");
-//     //         Serial.println(neighborMode);
-//     //         state->setMode(neighborMode);
-//     //     }
-
-//     //     state->charging = true;
-//     //     Serial.println("[SYNC] Charging ENABLED.");
-//     // }
-
-//     // Serial.println("----------------------------------------\n");
-// }
-
 void MQTTHandler::printPeerInfo(int alivePeers, int totalPeers, bool neighborsMatch, String neighborMode){
     Serial.println("---------- Coordination Debug ----------");
     Serial.print("[DEBUG] Alive peers: ");
@@ -363,9 +207,6 @@ void MQTTHandler::printPeerInfo(int alivePeers, int totalPeers, bool neighborsMa
     Serial.println(state->charging ? "ON" : "OFF");
 }
 
-void MQTTHandler::countActiveStations(){
-    systemState->aliveCount();
-}
 
 void MQTTHandler::printOwnInfo(){
     Serial.println("Mode: ");

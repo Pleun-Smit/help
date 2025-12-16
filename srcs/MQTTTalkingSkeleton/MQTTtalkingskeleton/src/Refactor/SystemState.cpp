@@ -4,13 +4,14 @@
 
 SystemState::SystemState(unsigned long timeout) : timeoutMs(timeout) {}
 
+
 void SystemState::updateStation(int id, const String& mode, int power, bool connected) {
-    StationInfo info = { StationState(id), millis(), connected };
+    auto& info = stations[id];
+    info = StationInfo(StationState(id), millis(), connected);
     info.state.setMode(mode);
     info.state.power = power;
-    info.connected = connected;
-    stations[id] = info;
 }
+
 
 void SystemState::removeStation(int id) {
     stations.erase(id);

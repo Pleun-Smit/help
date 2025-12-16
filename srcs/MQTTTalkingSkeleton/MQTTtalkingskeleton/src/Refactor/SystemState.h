@@ -4,7 +4,7 @@
 #include "StationState.h"
 
 class SystemState {
-public:
+  public:
   struct StationInfo {
     StationState state;       // neighbor snapshot (id/mode/power)
     unsigned long lastUpdate; // millis() when last update seen
@@ -13,12 +13,6 @@ public:
     StationInfo(StationState s, unsigned long t, bool c = false)
       : state(s), lastUpdate(t), connected(c) {}
   };
-
-private:
-  std::map<int, StationInfo> stations;
-  unsigned long timeoutMs;
-
-public:
   SystemState(unsigned long timeout = 5000);
 
   void updateStation(int id, const String& mode, int power, bool connected = true);
@@ -35,4 +29,10 @@ public:
   void printNeighborsToSerial(int selfId) const;
 
   const std::map<int, StationInfo>& getStations() const { return stations; }
+
+private:
+  std::map<int, StationInfo> stations;
+  unsigned long timeoutMs;
+
+
 };

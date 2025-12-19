@@ -1,5 +1,6 @@
-#include "MQTTHandler.h"
-#include "Helpers.h"
+#include "MQTTHandler/MQTTHandler.h"
+#include "MQTTHandler/Helpers.h"
+#include "Strategy/StrategyManager.h"
 
 #define EXPECTED_STATION_COUNT 2    // Set this to the number of charging stations in your network
 
@@ -11,6 +12,12 @@ MQTTHandler::MQTTHandler(const char* ssid, const char* password, const char* mqt
                          std::shared_ptr<StationState> state, SystemState* systemState)
     : client(wifi), ssid(ssid), password(password), mqtt_server(mqtt_server), state(state), systemState(systemState) {
     instance = this;
+
+    // Create and own a StrategyManager that works on the shared StationState
+    // NOTE: StrategyManager expects a StationState&; dereference the shared_ptr
+    //strategyManager = std::make_unique<StrategyManager>(*state);
+    strategyManager = std::unique_ptr<StrategyManager>(new StrategyManager(*state));
+
 }
 
 void MQTTHandler::initialize() {
@@ -106,8 +113,10 @@ void MQTTHandler::publishStatusToDashboard() {
     if (millis() - lastPublish > 2000) {
         lastPublish = millis();
 
-        String payload = "{\"alive\":true,\"power\":" + String(state->power) +
-                         ",\"mode\":\"" + state->mode + "\"}";
+        String payload = "{\"alive\":true,"
+                 + String(",\"power\":") + String(state->power)
+                 + String(",\"allowedPower\":") + String(state->allowedPower, 2)
+                 + String(",\"mode\":\"") + Helpers::modeToString(state->mode) + "\"}";
 
         String topic = "station/" + String(state->id) + "/status";
         Serial.printf("[PUBLISH] topic='%s', payload=%s\n", topic.c_str(), payload.c_str());
@@ -154,6 +163,9 @@ void MQTTHandler::update() {
         }
 
         state->charging = true; // allow charging
+
+        if (strategyManager) strategyManager->update();
+
         return;                 // skip neighbor/safety logic
     }
 
@@ -174,12 +186,14 @@ void MQTTHandler::update() {
 
     if (disagreement || missingPeers) {
         if (state->mode != StationState::Static) {
-            Serial.println("[SAFETY] Disagreement or offline peers → forcing STATIC mode.");
+            Serial.println("[SAFETY] Disagreement or offline peers, forcing STATIC mode.");
             state->setMode(StationState::Static);
         }
         state->charging = false;
+        if (strategyManager) strategyManager->update();
         return;
     }
+
     String neighborModeStr = Helpers::modeToString(neighborMode);
     // Sync mode if needed
     if (neighborMode != state->mode) {
@@ -187,7 +201,14 @@ void MQTTHandler::update() {
         state->setMode(neighborMode);
     }
 
-    state->charging = true; // normal operation
+    state->charging = true; // normal 
+    
+    state->availablePower = /* calculate or read available power */ state->availablePower; // leave as-is if set elsewhere
+    state->onlineStations = alivePeers + 1; // include this station
+
+    if (strategyManager) {
+        strategyManager->update();
+    }
 }
 
 

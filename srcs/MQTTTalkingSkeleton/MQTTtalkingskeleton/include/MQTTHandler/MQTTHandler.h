@@ -5,14 +5,13 @@
 #include <memory>
 #include "StationState.h"
 #include "SystemState.h"
+#include "Strategy/StrategyManager.h"
 
 class MQTTHandler {
 public:
-  MQTTHandler(const char* ssid,
-              const char* password,
-              const char* mqtt_server,
-              std::shared_ptr<StationState> state,
-              SystemState* systemState);
+    MQTTHandler(const char* ssid, const char* password, const char* mqtt_server,
+                std::shared_ptr<StationState> state, SystemState* systemState);
+
 
   /**
    * Initializes MQTT, sets SSID, password and server
@@ -35,6 +34,10 @@ public:
    */
   void publish(String topic, String payload, int intervalMs);
 
+  void ManualMode(StationState::Mode mode);
+
+  void applyDashboardMode(const StationState::Mode& mode); 
+
 private:
   WiFiClient wifi;
   PubSubClient client;
@@ -55,13 +58,15 @@ private:
   void publishConnectionStatus(bool alive);
   void printPeerInfo(int alivePeers, int totalPeers, bool neighborsMatch, StationState::Mode neighborMode);
   void printOwnInfo();
-  void ManualMode(StationState::Mode mode);
+  
   void HandleSerialInput();
-  void applyDashboardMode(const StationState::Mode& mode); 
+
 
   unsigned long lastPrintTime = 0;
   const unsigned long interval = 2000;  // 2000ms
 
   unsigned long lastDashboardUpdate = 0;
   const unsigned long dashboardGraceMs = 5000; // 5000ms grace period
+
+  std::unique_ptr<StrategyManager> strategyManager;
 };

@@ -1,6 +1,6 @@
-#include "StationState.h"
-#include "SystemState.h"
-#include "MQTTHandler.h"
+#include "MQTTHandler/StationState.h"
+#include "MQTTHandler/SystemState.h"
+#include "MQTTHandler/MQTTHandler.h"
 // 0 COM20, 1 COM19, 2 COM6, COM21 dash
 // Set unique station ID for this ESP
 constexpr int stationId = 2; // Change 0/1/2/3 for each device

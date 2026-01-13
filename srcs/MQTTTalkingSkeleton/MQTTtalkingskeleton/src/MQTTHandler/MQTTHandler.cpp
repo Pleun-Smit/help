@@ -2,7 +2,8 @@
 #include "MQTTHandler/Helpers.h"
 #include "Strategy/StrategyManager.h"
 
-#define EXPECTED_STATION_COUNT 2    // Set this to the number of charging stations in your network
+#define EXPECTED_STATION_COUNT 4    // Set this to the number of charging stations in network
+
 
 
 
@@ -47,11 +48,15 @@ void MQTTHandler::callback(char* topic, byte* payload, unsigned int length) {
 
     // ------------------ Station status ------------------
     if (t.startsWith("station/") && t.endsWith("/status")) {
-        int id = extractIdFromTopic(t);
         StaticJsonDocument<200> doc;
-        if (deserializeJson(doc, msg)) return;
+        DeserializationError err = deserializeJson(doc, msg);
+        if (err) {
+            Serial.println("[MQTT] Failed to parse station status JSON!");
+            return;
+        }
 
-        bool alive = doc["alive"];
+        int id = extractIdFromTopic(t);
+        bool alive = doc["alive"] | false;
         String modeStr = doc["mode"] | "STATIC";
         StationState::Mode mode = Helpers::modeFromString(modeStr);
         int power = doc["power"] | 0;
@@ -60,6 +65,7 @@ void MQTTHandler::callback(char* topic, byte* payload, unsigned int length) {
 
         Serial.printf("[MQTT] Station %d status: mode=%s, power=%d, alive=%s\n",
                       id, modeStr.c_str(), power, alive ? "true" : "false");
+        return;
     }
 
     // ------------------ Dashboard mode ------------------
@@ -68,9 +74,10 @@ void MQTTHandler::callback(char* topic, byte* payload, unsigned int length) {
         DeserializationError err = deserializeJson(doc, msg);
         if (err) {
             Serial.println("[MQTT] Failed to parse dashboard/mode JSON!");
+            return;
         } else {
             String mode = doc["mode"] | "STATIC";
-            StationState::Mode mode2 = Helpers::modeFromString(mode); // da es nie fanccy maar wist even niet beter
+            StationState::Mode mode2 = Helpers::modeFromString(mode);
 
             // 1) Apply locally
             state->setMode(mode2);
@@ -78,17 +85,37 @@ void MQTTHandler::callback(char* topic, byte* payload, unsigned int length) {
             // 2) Start dashboard grace period
             lastDashboardUpdate = millis();
 
-            // 3) Publish immediately to peers
+            // 3) Recompute strategy before immediate publish so allowedPower is up-to-date
+            if (strategyManager) {
+                strategyManager->update();
+            }
+
+            // 4) Publish immediately to peers (now include allowedPower)
             String payload = "{\"alive\":true,\"power\":" + String(state->power) +
-                             ",\"mode\":\"" + state->mode + "\"}";
+                             ",\"allowedPower\":" + String(state->allowedPower, 2) +
+                             ",\"mode\":\"" + Helpers::modeToString(state->mode) + "\"}";
             String topicOut = "station/" + String(state->id) + "/status";
             client.publish(topicOut.c_str(), payload.c_str(), true);
 
             Serial.printf("[MQTT] Dashboard mode applied and published: %s\n", mode.c_str());
+            return;
         }
     }
+
+    // ------------------ System mode (example handler) ------------------
+    else if (t == "system/mode") {
+        Serial.printf("[MQTT] system/mode: %s\n", msg.c_str());
+        return;
+    }
+
+    // ------------------ Station connection ------------------
+    else if (t.startsWith("station/") && t.endsWith("/connection")) {
+        Serial.printf("[MQTT] station connection: %s\n", t.c_str());
+        return;
+    }
+
     else {
-        Serial.printf("Topic is illegal");
+        Serial.printf("[MQTT] Topic is illegal: %s\n", t.c_str());
         return;
     }
 }
@@ -113,7 +140,12 @@ void MQTTHandler::publishStatusToDashboard() {
     if (millis() - lastPublish > 2000) {
         lastPublish = millis();
 
-        String payload = "{\"alive\":true,"
+        // Make sure allowedPower is current before we publish
+        if (strategyManager) {
+            strategyManager->update();
+        }
+
+        String payload = "{\"alive\":true"
                  + String(",\"power\":") + String(state->power)
                  + String(",\"allowedPower\":") + String(state->allowedPower, 2)
                  + String(",\"mode\":\"") + Helpers::modeToString(state->mode) + "\"}";
@@ -128,7 +160,7 @@ void MQTTHandler::publishConnectionStatus(bool alive) {
     static unsigned long lastPublish = 0;
     if (millis() - lastPublish > 1000) {
         lastPublish = millis();
-        String payload = "{\"alive\":" + String(alive ? "true" : "false") + ",\"mode\":\"" + state->mode + "\"}";
+        String payload = "{\"alive\":" + String(alive ? "true" : "false") + ",\"mode\":\"" + Helpers::modeToString(state->mode) + "\"}";
         String topic = "station/" + String(state->id) + "/connection";
         client.publish(topic.c_str(), payload.c_str(), true);
     }
@@ -181,10 +213,10 @@ void MQTTHandler::update() {
         lastPrintTime = now;
     }
 
-    bool disagreement = !neighborsMatch;
+    bool disagreement = !neighborsMatch || (neighborMode != state->mode);
     bool missingPeers = alivePeers < totalPeers;
 
-    if (disagreement || missingPeers) {
+    if (disagreement) { // || missingPeers
         if (state->mode != StationState::Static) {
             Serial.println("[SAFETY] Disagreement or offline peers, forcing STATIC mode.");
             state->setMode(StationState::Static);
@@ -203,8 +235,8 @@ void MQTTHandler::update() {
 
     state->charging = true; // normal 
     
-    state->availablePower = /* calculate or read available power */ state->availablePower; // leave as-is if set elsewhere
-    state->onlineStations = alivePeers + 1; // include this station
+    state->availablePower = 20; /* calculate or read available power */ //state->availablePower; // need this from the building
+    state->onlineStations = alivePeers; // include this station was +1 but noticed that that was incorrect
 
     if (strategyManager) {
         strategyManager->update();
@@ -223,10 +255,10 @@ void MQTTHandler::printPeerInfo(int alivePeers, int totalPeers, bool neighborsMa
     Serial.println(neighborsMatch ? "YES" : "NO");
 
     Serial.print("[DEBUG] Neighbor selected mode: ");
-    Serial.println(neighborMode);
+    Serial.println(Helpers::modeToString(neighborMode));
 
     Serial.print("[DEBUG] Local mode: ");
-    Serial.println(state->mode);
+    Serial.println(Helpers::modeToString(state->mode));
 
     Serial.print("[DEBUG] Local charging: ");
     Serial.println(state->charging ? "ON" : "OFF");
@@ -235,7 +267,7 @@ void MQTTHandler::printPeerInfo(int alivePeers, int totalPeers, bool neighborsMa
 
 void MQTTHandler::printOwnInfo(){
     Serial.println("Mode: ");
-    Serial.println(state->mode);
+    Serial.println(Helpers::modeToString(state->mode));
 }
 
 void MQTTHandler::publish(String topic, String payload){
@@ -267,4 +299,4 @@ void MQTTHandler::HandleSerialInput(){
         StationState::Mode mode = Helpers::modeFromString(modeStr);
         ManualMode(mode);
     }
-}   
+}

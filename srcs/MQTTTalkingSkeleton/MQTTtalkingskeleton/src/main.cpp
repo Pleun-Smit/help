@@ -1,14 +1,16 @@
 #include "MQTTHandler/StationState.h"
 #include "MQTTHandler/SystemState.h"
 #include "MQTTHandler/MQTTHandler.h"
-// 0 COM20, 1 COM19, 2 COM6, COM21 dash
+// 0 COM20, 2 COM19, 3 COM6, COM25 dash
 // Set unique station ID for this ESP
-constexpr int stationId = 2; // Change 0/1/2/3 for each device
+constexpr int stationId = 0; // Change 0/1/2/3 for each device
 
 auto station = std::make_shared<StationState>(stationId);
 SystemState systemState(5000); // 5 second peer timeout window
 
-MQTTHandler mqtt("EV-CHARGING", "TestTest", "192.168.137.1", station, &systemState);
+//MQTTHandler mqtt("EV-CHARGING", "TestTest", "192.168.137.1", station, &systemState);
+MQTTHandler mqtt("TP-LINK_225C1C", "29354245", "192.168.0.101", station, &systemState);
+
 
 void setup() {
     Serial.begin(115200);
@@ -18,3 +20,264 @@ void setup() {
 void loop() {
     mqtt.update();   // Handles MQTT + coordination logic
 }
+
+// #include <Arduino.h>
+// #include <WiFi.h>
+// #include <PubSubClient.h>
+// #include <WebServer.h>
+// #include <ArduinoJson.h>
+
+// bool burstActive = false;
+// unsigned long burstStart = 0;
+// unsigned long lastBurstPublish = 0;
+// const unsigned long burstDuration = 3000; // burst lasts 3 seconds
+// const unsigned long burstInterval = 300;  // publish every 300 ms
+// String burstMode = "STATIC";
+
+
+// String stationMode[4] = {"?", "?", "?", "?"};
+// String powerUsage[4] = {"?", "?", "?", "?"};
+
+
+// const char* ssid = "TP-LINK_225C1C";
+// const char* password = "29354245";
+// const char* mqtt_server = "192.168.0.101"; //192.168.137.1
+
+// WiFiClient espClient;
+// PubSubClient client(espClient);
+// WebServer server(80);
+
+// String currentMode = "STATIC";
+// unsigned long lastUpdate[4]; // Track station updates
+// const unsigned long timeoutMs = 5000; // 5 sec timeout
+
+// void handleRoot();
+// void handleSetMode();
+// void sendModeToStation();
+// void callback(char* topic, byte* payload, unsigned int length);
+// void reconnect();
+// void handleBurstPublish();
+
+// void setup() {
+//   Serial.begin(115200);
+//   // WiFi.begin(ssid, password);
+//   // Serial.print("Connecting to WiFi...");
+//   // while (WiFi.status() != WL_CONNECTED) {
+//   //   delay(500);
+//   //   Serial.print(".");
+//   // }
+//   // Serial.println("\nConnected!");
+//   // Serial.print("IP Address: ");
+//   // Serial.println(WiFi.localIP());
+//   WiFi.mode(WIFI_STA);
+// WiFi.disconnect(true);
+// delay(1000);
+
+// WiFi.begin(ssid, password);
+
+// Serial.println("Connecting to WiFi...");
+// unsigned long startAttempt = millis();
+
+// while (WiFi.status() != WL_CONNECTED && millis() - startAttempt < 15000) {
+//   delay(500);
+//   Serial.print(".");
+// }
+
+// Serial.println();
+
+// if (WiFi.status() == WL_CONNECTED) {
+//   Serial.println("WiFi connected!");
+//   Serial.print("IP: ");
+//   Serial.println(WiFi.localIP());
+// } else {
+//   Serial.println("WiFi FAILED to connect");
+//   Serial.print("Status code: ");
+//   Serial.println(WiFi.status());
+// }
+
+//   client.setServer(mqtt_server, 1883);
+//   client.setCallback(callback);
+
+//   server.on("/", handleRoot);
+//   server.on("/setMode", handleSetMode);
+//   server.begin();
+
+//   for (int i = 0; i < 4; i++) {
+//     lastUpdate[i] = 0;
+//   }
+// }
+
+// void loop() {
+//   if (!client.connected()) reconnect();
+//   client.loop();
+//   server.handleClient();
+
+//   handleBurstPublish();
+// }
+
+// void handleRoot() {
+//   String html = "<!DOCTYPE html><html><head><title>EV Dashboard</title>""<meta http-equiv='refresh' content='2'>""</head><body>";
+//   html += "<h1>EV Charging Dashboard</h1>";
+//   html += "<p>Current Mode: <b>" + currentMode + "</b></p>";
+
+//   // Mode buttons
+//   html += "<h2>Change Mode:</h2>";
+//   html += "<form action='/setMode' method='GET'>";
+//   html += "<button type='submit' name='mode' value='STATIC'>STATIC</button>";
+//   html += "<button type='submit' name='mode' value='DYNAMIC'>DYNAMIC</button>";
+//   html += "<button type='submit' name='mode' value='FCFS'>FCFS</button>";
+//   html += "<button type='submit' name='mode' value='DIRECTORS'>DIRECTORS</button>";
+//   html += "</form>";
+
+
+//   // Station status
+//   html += "<h2>Stations:</h2><ul>";
+//   for (int i = 0; i < 4; i++) {
+//     html += "<li>Station " + String(i+1) + ": ";
+
+//     bool alive = (lastUpdate[i] != 0 && millis() - lastUpdate[i] <= timeoutMs);
+  
+//   if (alive)
+//     html += "<span style='color:green;'>Alive</span>";
+//   else
+//     html += "<span style='color:red;'>Dead</span>";
+
+//   // Show mode only if station is alive
+//   if (alive)
+//     html += " --- Mode: <b>" + stationMode[i] + "</b>"  + "--- Power usage: <b>" + powerUsage[i] + "</b>";
+//   else
+//     html += "";
+     
+
+//   html += "</li>";
+//   }
+
+//   html += "</ul>";
+
+//   server.send(200, "text/html", html);
+// }
+
+
+// // void handleSetMode() {
+// //     currentMode = server.arg("mode");
+
+// //     // Send only dashboard/mode JSON
+// //     String payload = "{\"mode\":\"" + currentMode + "\"}";
+// //     client.publish("dashboard/mode", payload.c_str(), true);
+
+// //     Serial.print("[Dashboard] Sent mode: ");
+// //     Serial.println(currentMode);
+
+// //     server.sendHeader("Location", "/");
+// //     server.send(303);
+// // }
+
+// void handleSetMode() {
+//     currentMode = server.arg("mode");
+
+//     // start burst
+//     burstMode = currentMode;
+//     burstActive = true;
+//     burstStart = millis();
+//     lastBurstPublish = 0;
+
+//     Serial.print("[Dashboard] Burst triggered for mode: ");
+//     Serial.println(currentMode);
+
+//     // redirect back to UI
+//     server.sendHeader("Location", "/");
+//     server.send(303);
+// }
+
+// void handleBurstPublish() {
+//     if (!burstActive) return;    // nothing to do
+
+//     unsigned long now = millis();
+
+//     // stop burst if duration ended
+//     if (now - burstStart > burstDuration) {
+//         burstActive = false;
+//         Serial.println("[Dashboard] Burst finished.");
+//         return;
+//     }
+
+//     // publish at intervals
+//     if (now - lastBurstPublish > burstInterval) {
+//         lastBurstPublish = now;
+
+//         String payload = "{\"mode\":\"" + burstMode + "\"}";
+//         client.publish("dashboard/mode", payload.c_str(), true);
+
+//         Serial.print("[Dashboard] BURST publish: ");
+//         Serial.println(payload);
+//     }
+// }
+
+
+
+// void callback(char* topic, byte* payload, unsigned int length) {
+//     String t = String(topic);
+//     String msg;
+
+//     for (int i = 0; i < length; i++) {
+//         msg += (char)payload[i];
+//     }
+
+//     // Only handle station status messages
+//     if (t.startsWith("station/") && t.endsWith("/status")) {
+
+//         // Extract station ID between "station/" and "/status"
+//         int start = t.indexOf('/') + 1;     // position after "station/"
+//         int end   = t.indexOf('/', start);  // position before "status"
+//         int id    = t.substring(start, end).toInt(); // convert to integer
+
+//         // Validate ID range
+//         if (id >= 0 && id < 4) {
+//             lastUpdate[id] = millis();
+//             Serial.print("Raw payload: [");
+//             Serial.print(msg);
+//             Serial.println("]");
+
+
+//             StaticJsonDocument<200> doc;
+//             DeserializationError err = deserializeJson(doc, msg);
+
+//             if (err) {
+//                 Serial.print("JSON error: ");
+//                 Serial.println(err.c_str());
+//                 return;
+//             }
+
+//             String mode = doc["mode"] | "?";
+//             stationMode[id] = mode;
+//             if (doc.containsKey("power")){
+//                 float power = doc["power"];
+//                 powerUsage[id] = String(power);
+//             }else {
+//                 powerUsage[id] = "?";
+//             }
+
+            
+
+//             Serial.printf("[Dashboard] Station %d mode=%s\n", id, mode.c_str());
+//         }
+//     }
+// }
+
+
+
+// void reconnect() {
+//   while (!client.connected()) {
+//     Serial.print("Attempting MQTT connection...");
+//     if (client.connect("Dashboard")) {
+//       Serial.println("connected");
+//       client.subscribe("station/+/status");
+//       client.subscribe("station/+/mode");
+//     } else {
+//       Serial.print("failed, rc=");
+//       Serial.print(client.state());
+//       Serial.println(" try again in 5 seconds");
+//       delay(5000);
+//     }
+//   }
+// }

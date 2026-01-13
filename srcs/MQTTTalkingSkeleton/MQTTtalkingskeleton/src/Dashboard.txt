@@ -181,6 +181,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
         // Validate ID range
         if (id >= 0 && id < 4) {
             lastUpdate[id] = millis();
+            Serial.print("Raw payload: [");
+            Serial.print(msg);
+            Serial.println("]");
+
 
             StaticJsonDocument<200> doc;
             DeserializationError err = deserializeJson(doc, msg);
